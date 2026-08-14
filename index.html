@@ -382,7 +382,7 @@
   <!-- AUTH SCREEN -->
   <section id="auth-screen" class="screen active">
     <div class="flyer-head">
-      <p class="eyebrow">Mixtape // Step 1</p>
+      <p class="eyebrow">Step 1</p>
       <h1>CONNECT<br><span>SPOTIFY</span></h1>
       <p class="sub">Log in with Spotify so we can search real tracks and save your finished mix straight to your account.</p>
     </div>
@@ -400,7 +400,7 @@
       <button class="linklike" id="logout-btn">Log out</button>
     </div>
     <div class="flyer-head">
-      <p class="eyebrow">Mixtape // Build Mode</p>
+      <p class="eyebrow">Build Mode</p>
       <h1>SWIPE YOUR<br><span>SOUND</span></h1>
       <p class="sub">Set the vibe below. Then swipe right to keep a track, left to skip — every swipe sharpens what comes next.</p>
     </div>
@@ -481,7 +481,7 @@
 
   <!-- DONE SCREEN -->
   <section id="done-screen" class="screen">
-    <p class="eyebrow">Mixtape // Complete</p>
+    <p class="eyebrow">Complete</p>
     <h1 style="font-family:var(--display);font-size:clamp(40px,11vw,56px);line-height:0.9;margin:0 0 8px;">YOUR MIX<br>IS READY</h1>
     <p class="sub" id="done-sub" style="color:var(--muted);font-size:14px;margin:0 0 16px;"></p>
     <div id="done-status" style="display:none;"></div>
@@ -673,7 +673,7 @@ async function apiFetch(path, opts={}, allowRetry429=true){
     }
     if(res.status===429 && allowRetry429){
       const retryAfter = Number(res.headers.get('Retry-After') || '1');
-      console.warn('[mixtape] rate limited (429) on', path, '— retrying in', retryAfter, 's');
+      console.warn('[swipeyoursound] rate limited (429) on', path, '— retrying in', retryAfter, 's');
       await new Promise(r=> setTimeout(r, (retryAfter+0.3)*1000));
       return apiFetch(path, opts, false);
     }
@@ -795,19 +795,19 @@ function scoreAndSort(arr){ arr.forEach(t=>{ t._score = computeScore(t); }); arr
 async function searchTracksRaw(q, limit=50){
   try{
     const res = await apiFetch(`/search?${new URLSearchParams({q, type:'track', limit:String(limit)})}`);
-    if(!res.ok){ console.error('[mixtape] track search failed', q, res.status); return []; }
+    if(!res.ok){ console.error('[swipeyoursound] track search failed', q, res.status); return []; }
     const data = await res.json();
     return (data.tracks && data.tracks.items) || [];
-  }catch(e){ console.error('[mixtape] track search error', q, e); return []; }
+  }catch(e){ console.error('[swipeyoursound] track search error', q, e); return []; }
 }
 async function fetchArtistsByGenre(genre, limit=10){
   try{
     const q = `genre:"${genre.toLowerCase()}"`;
     const res = await apiFetch(`/search?${new URLSearchParams({q, type:'artist', limit:String(limit)})}`);
-    if(!res.ok){ console.error('[mixtape] artist genre search failed', genre, res.status); return []; }
+    if(!res.ok){ console.error('[swipeyoursound] artist genre search failed', genre, res.status); return []; }
     const data = await res.json();
     return (data.artists && data.artists.items) || [];
-  }catch(e){ console.error('[mixtape] artist genre search error', genre, e); return []; }
+  }catch(e){ console.error('[swipeyoursound] artist genre search error', genre, e); return []; }
 }
 async function tracksForArtist(artistName, limit=10){
   const parts = [`artist:"${artistName}"`];
@@ -819,7 +819,7 @@ async function tracksForGenre(genre, opts={}){
   const perArtist = opts.perArtist || 8;
   const artists = await fetchArtistsByGenre(genre, 10);
   if(artists.length === 0){
-    console.warn('[mixtape] no artists found for genre tag', genre, '— falling back to keyword search');
+    console.warn('[swipeyoursound] no artists found for genre tag', genre, '— falling back to keyword search');
     const parts = [genre];
     if(cfg.era!=='any' && ERA_RANGES[cfg.era]) parts.push(`year:${ERA_RANGES[cfg.era]}`);
     return await searchTracksRaw(parts.join(' '), 30);
@@ -864,7 +864,7 @@ async function buildDeck(){
   deck = [...collected.values()];
   scoreAndSort(deck);
   liked = []; disliked = []; bannerShown = false;
-  if(deck.length === 0) console.warn('[mixtape] deck build produced zero tracks for targets:', targets);
+  if(deck.length === 0) console.warn('[swipeyoursound] deck build produced zero tracks for targets:', targets);
 }
 
 async function maybeReplenish(){
@@ -888,7 +888,7 @@ async function maybeReplenish(){
     deck.push(...fresh);
     scoreAndSort(deck);
     if($('card-stack').querySelector('.empty-state')) renderStack();
-  }catch(e){ console.error('[mixtape] replenish failed', e); }
+  }catch(e){ console.error('[swipeyoursound] replenish failed', e); }
   replenishing = false;
 }
 
@@ -1168,7 +1168,7 @@ $('setup-form').addEventListener('submit', async e=>{
     renderStack();
     if(deck.length===0) showToast('No tracks found for these filters — try widening them');
   }catch(err){
-    console.error('[mixtape] buildDeck failed', err);
+    console.error('[swipeyoursound] buildDeck failed', err);
     showToast('Could not load tracks from Spotify — check the console for details');
   } finally {
     btn.disabled = false; btn.textContent = original;
@@ -1178,8 +1178,8 @@ $('setup-form').addEventListener('submit', async e=>{
 /* ============ DONE / CREATE PLAYLIST ============ */
 async function createSpotifyPlaylist(){
   if(!currentUser) await fetchMe();
-  const name = `Mixtape — ${new Date().toLocaleDateString()}`;
-  const description = `Built by swiping ${liked.length} tracks on Mixtape Swipe. Genres: ${[...cfg.genres].join(', ')||'mixed'}.`.slice(0,300);
+  const name = `SwipeYourSound — ${new Date().toLocaleDateString()}`;
+  const description = `Built by swiping ${liked.length} tracks on Swipe Your Sound. Genres: ${[...cfg.genres].join(', ')||'mixed'}.`.slice(0,300);
   const createRes = await apiFetch('/me/playlists', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ name, description, public:false })
@@ -1199,7 +1199,7 @@ async function createSpotifyPlaylist(){
 }
 function playlistText(){
   const lines = liked.map((s,i)=> `${i+1}. ${s.name} — ${(s.artists||[]).map(a=>a.name).join(', ')} [${s._genre}]`);
-  return `MIXTAPE — ${new Date().toLocaleDateString()}\n${liked.length} tracks\n\n` + lines.join('\n');
+  return `SWIPEYOURSOUND — ${new Date().toLocaleDateString()}\n${liked.length} tracks\n\n` + lines.join('\n');
 }
 function renderDoneList(){
   const list = $('done-list'); list.innerHTML = '';
@@ -1229,7 +1229,7 @@ function renderDoneActions(playlistUrl){
   const dlBtn = document.createElement('button'); dlBtn.textContent='Download as .txt';
   dlBtn.addEventListener('click', ()=>{
     const blob = new Blob([playlistText()], {type:'text/plain'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='mixtape.txt'; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='swipeyoursound.txt'; a.click();
     URL.revokeObjectURL(a.href);
   });
   const restartBtn = document.createElement('button'); restartBtn.textContent='Start a new mix';
